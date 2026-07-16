@@ -94,7 +94,7 @@ written.
 
 ## About
 
-**Cheong Wai Kit (W.K.)** — Business Analyst (Finance) at a Bursa Malaysia-listed
+**W.K. CHEONG** — Business Analyst (Finance) at a Bursa Malaysia-listed
 manufacturer, building AI-assisted tooling and automation. Based in Ipoh, Malaysia.
 
 📫 Reach me through the contact scene on **[alley618.dev](https://alley618.dev)** — send
