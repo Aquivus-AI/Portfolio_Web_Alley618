@@ -33,8 +33,9 @@ framer-motion · Three.js via @react-three/fiber
 
 **Infrastructure:** Cloudflare Workers — one Worker serves the static build on
 `alley618.dev`; a second Worker with a SQLite-backed Durable Object provides the atomic
-visit counter. Push to `main` triggers Cloudflare Workers Builds (`npm ci` → `next build`
-→ `wrangler deploy`), so a broken commit can never take the live site down.
+visit counter, mirrored to a D1 database so the count outlives the Worker that owns it.
+Push to `main` triggers Cloudflare Workers Builds (`npm ci` → `next build` →
+`wrangler deploy`), so a broken commit can never take the live site down.
 
 ```mermaid
 flowchart LR
@@ -42,6 +43,7 @@ flowchart LR
     gh -->|Workers Builds CI| cf["Cloudflare Worker<br/>static assets"]
     cf --> site["alley618.dev"]
     site -->|fetch count| dc["Counter Worker<br/>+ SQLite Durable Object"]
+    dc -->|mirror every increment| d1["D1 database<br/>survives Worker deletion"]
 ```
 
 ## Engineering highlights
@@ -73,6 +75,19 @@ card — WebP silently breaks link previews); and a week-old domain being blocke
 corporate firewalls disguised as an SSL error — a forged Fortinet certificate on an
 `Unrated` domain — fixed by submitting the domain for categorization at the filter
 vendors, not by touching the server.
+
+**A public counter that can't be inflated — or lost.** The visit counter shipped open: one
+`curl -X POST` added a visit, and the number lived in exactly one place, a Durable Object
+whose storage dies with the Worker. Now `POST` requires an allow-listed `Origin` (browsers
+send it on every non-GET request; `curl` doesn't), crawlers and floods are refused by a cap
+keyed on a salted, daily-rotating hash of IP+UA that stores **no raw address**, and every
+increment mirrors to D1 — a separate resource, so deleting the Worker no longer destroys
+the count. The board degrades honestly too: if the counter can't be reached it shows blank
+plates and tells a screen reader "Total visits unavailable", rather than displaying a demo
+number under a heading that says TOTAL VISITS. The most useful find came from reviewing the
+*plan's* own code: the recovery path would have written a zero over the real total, and
+every local test was green because the failure only fires in the one environment the tests
+didn't have.
 
 **Accessibility is load-bearing.** Reduced-motion users get a calm, complete site (the
 intro scroll-lock never engages). Contact controls are in the DOM from first paint for
